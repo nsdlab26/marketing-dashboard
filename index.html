@@ -53,12 +53,16 @@ body{background:#f5f5f3;font-family:'Pretendard',-apple-system,BlinkMacSystemFon
 .lsq{width:9px;height:9px;border-radius:2px;flex-shrink:0}
 
 /* 테이블 행 */
-.crow{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid #f0f0ee;gap:8px}
+.crow{display:flex;align-items:center;padding:9px 0;border-bottom:1px solid #f0f0ee;gap:0}
 .crow:last-child{border-bottom:none}
-.cn{font-size:12px;font-weight:500;color:#1a1a18;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cn-wrap{flex:1;min-width:0;padding-right:10px}
+.cn{font-size:12px;font-weight:500;color:#1a1a18;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .csub{font-size:10px;color:#9b9b97;margin-top:1px}
-.cst{display:flex;gap:10px;flex-shrink:0}
-.cs{text-align:right}
+.cst{display:flex;flex-shrink:0}
+.cs{text-align:right;width:58px;padding-left:4px}
+.cs-av{text-align:right;width:44px;padding-left:4px}
+.cs-ctr{text-align:right;width:50px;padding-left:4px}
+.cs-cpc{text-align:right;width:60px;padding-left:4px}
 .csl{font-size:9px;color:#9b9b97;text-transform:uppercase;letter-spacing:.05em}
 .csv{font-size:12px;font-family:'Pretendard',monospace;color:#1a1a18}
 
@@ -361,7 +365,7 @@ function renderMetaWeek(wk){
   document.getElementById('meta-camps').innerHTML=Object.entries(campMap).sort((a,b)=>b[1].spend-a[1].spend).map(([name,s])=>{
     const ctr=s.impressions?+(s.actionValue/s.impressions*100).toFixed(2):0;
     const cpc=s.actionValue?Math.round(s.spend/s.actionValue):0;
-    return`<div class="crow"><div style="min-width:0;flex:1"><div class="cn">${name}</div><div class="csub">${s.impressions.toLocaleString()} 노출 · 도달 ${s.reach.toLocaleString()}</div></div><div class="cst"><div class="cs"><div class="csl">지출</div><div class="csv">${fmtW(s.spend)}</div></div><div class="cs"><div class="csl">AV</div><div class="csv">${s.actionValue}</div></div><div class="cs"><div class="csl">CTR</div><div class="csv">${ctr}%</div></div><div class="cs"><div class="csl">CPC</div><div class="csv">${cpc?fmtW(cpc):'—'}</div></div></div></div>`;
+    return`<div class="crow"><div class="cn-wrap"><div class="cn">${name}</div><div class="csub">${s.impressions.toLocaleString()} 노출 · 도달 ${s.reach.toLocaleString()}</div></div><div class="cst"><div class="cs"><div class="csl">지출</div><div class="csv">${fmtW(s.spend)}</div></div><div class="cs-av"><div class="csl">AV</div><div class="csv">${s.actionValue}</div></div><div class="cs-ctr"><div class="csl">CTR</div><div class="csv">${ctr}%</div></div><div class="cs-cpc"><div class="csl">CPC</div><div class="csv">${cpc?fmtW(cpc):'—'}</div></div></div></div>`;
   }).join('');
 
   const adMap={};
@@ -370,7 +374,7 @@ function renderMetaWeek(wk){
   document.getElementById('meta-ads').innerHTML=ads.slice(0,6).map(([name,s])=>{
     const ctr=s.impressions?+(s.actionValue/s.impressions*100).toFixed(2):0;
     const cpc=s.actionValue?Math.round(s.spend/s.actionValue):0;
-    return`<div class="crow"><div style="min-width:0;flex:1"><div class="cn">${name}</div><div class="csub">${s.impressions.toLocaleString()} 노출 · 도달 ${s.reach.toLocaleString()}</div></div><div class="cst"><div class="cs"><div class="csl">지출</div><div class="csv">${fmtW(s.spend)}</div></div><div class="cs"><div class="csl">AV</div><div class="csv">${s.actionValue}</div></div><div class="cs"><div class="csl">CTR</div><div class="csv">${ctr}%</div></div><div class="cs"><div class="csl">CPC</div><div class="csv">${cpc?fmtW(cpc):'—'}</div></div></div></div>`;
+    return`<div class="crow"><div class="cn-wrap"><div class="cn">${name}</div><div class="csub">${s.impressions.toLocaleString()} 노출 · 도달 ${s.reach.toLocaleString()}</div></div><div class="cst"><div class="cs"><div class="csl">지출</div><div class="csv">${fmtW(s.spend)}</div></div><div class="cs-av"><div class="csl">AV</div><div class="csv">${s.actionValue}</div></div><div class="cs-ctr"><div class="csl">CTR</div><div class="csv">${ctr}%</div></div><div class="cs-cpc"><div class="csl">CPC</div><div class="csv">${cpc?fmtW(cpc):'—'}</div></div></div></div>`;
   }).join('');
 }
 
