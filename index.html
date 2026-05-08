@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>마케팅 대시보드 · Meta & GA</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#f7f7f5;--surface:#fff;--surface2:#f1f0ec;
+  --border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.14);
+  --text:#1a1a18;--text2:#6b6b67;--text3:#9b9b96;
+  --blue:#378ADD;--green:#1D9E75;--coral:#D85A30;
+  --pink:#D4537E;--purple:#534AB7;--amber:#BA7517;
+  --radius:10px;--radius-lg:14px;
+}
+@media(prefers-color-scheme:dark){:root{
+  --bg:#1a1a18;--surface:#242422;--surface2:#2e2e2b;
+  --border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.14);
+  --text:#f0efe9;--text2:#9b9b96;--text3:#6b6b67;
+}}
+body{font-family:-apple-system,'Pretendard','Apple SD Gothic Neo',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* HEADER */
+.header{background:var(--surface);border-bottom:0.5px solid var(--border);padding:14px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;}
+.header-left{display:flex;align-items:center;gap:10px;}
+.header-title{font-size:15px;font-weight:600;letter-spacing:-0.01em;}
+.badge{font-size:11px;padding:3px 9px;border-radius:99px;font-weight:500;background:rgba(55,138,221,0.13);color:#185FA5;}
+.header-right{display:flex;align-items:center;gap:10px;}
+.date-range{font-size:12px;color:var(--text2);}
+.refresh-btn{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:500;padding:6px 12px;border-radius:var(--radius);border:0.5px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;transition:all .15s;}
+.refresh-btn:hover{background:var(--surface2);color:var(--text);}
+.refresh-btn.loading svg{animation:spin 1s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* STATUS BAR */
+.status-bar{font-size:12px;padding:7px 28px;background:var(--surface2);border-bottom:0.5px solid var(--border);color:var(--text2);display:flex;align-items:center;gap:8px;}
+.status-dot{width:7px;height:7px;border-radius:50%;background:#1D9E75;flex-shrink:0;}
+.status-dot.error{background:#D85A30;}
+.status-dot.loading{background:#BA7517;animation:pulse 1s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+
+/* LAYOUT */
+.container{max-width:1100px;margin:0 auto;padding:24px 24px;}
+.tab-row{display:flex;gap:6px;margin-bottom:22px;}
+.tab{font-size:13px;font-weight:500;padding:7px 18px;border-radius:var(--radius);border:0.5px solid var(--border2);cursor:pointer;background:transparent;color:var(--text2);transition:all .15s;}
+.tab:hover{background:var(--surface2);color:var(--text);}
+.tab.active{background:var(--text);color:var(--bg);border-color:var(--text);}
+.section-label{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--text3);margin-bottom:14px;}
+.tab-content{display:none;}
+.tab-content.active{display:block;}
+
+/* METRIC CARDS */
+.metric-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:22px;}
+@media(max-width:700px){.metric-grid{grid-template-columns:repeat(2,1fr);}}
+.metric-card{background:var(--surface2);border-radius:var(--radius);padding:16px;}
+.metric-label{font-size:12px;color:var(--text2);margin-bottom:7px;}
+.metric-value{font-size:23px;font-weight:600;letter-spacing:-0.02em;min-height:32px;}
+.metric-sub{font-size:11px;margin-top:5px;color:var(--text3);}
+.up{color:#0F6E56;}.down{color:#993C1D;}
+
+/* CHARTS */
+.chart-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;}
+@media(max-width:700px){.chart-row{grid-template-columns:1fr;}}
+.chart-full{margin-bottom:20px;}
+.card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:20px;}
+.card-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;flex-wrap:wrap;gap:8px;}
+.card-title{font-size:13px;font-weight:600;}
+.legend{display:flex;flex-wrap:wrap;gap:12px;}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2);}
+.legend-dot{width:9px;height:9px;border-radius:2px;flex-shrink:0;}
+
+/* SKELETON */
+.skeleton{background:linear-gradient(90deg,var(--surface2) 25%,var(--border) 50%,var(--surface2) 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;}
+@keyframes shimmer{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
+.skeleton-text{height:28px;border-radius:4px;width:80%;}
+
+/* ERROR */
+.error-box{background:rgba(216,90,48,0.07);border:0.5px solid rgba(216,90,48,0.25);border-radius:var(--radius);padding:14px 16px;font-size:13px;color:var(--coral);margin-bottom:20px;}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <span class="header-title">마케팅 대시보드</span>
+    <span class="badge">Meta · GA</span>
+  </div>
+  <div class="header-right">
+    <span class="date-range" id="dateRange">데이터 로딩 중...</span>
+    <button class="refresh-btn" id="refreshBtn" onclick="loadAll()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+      새로고침
+    </button>
+  </div>
+</div>
+
+<div class="status-bar">
+  <span class="status-dot" id="statusDot"></span>
+  <span id="statusText">Google Sheets에서 데이터를 불러오는 중...</span>
+</div>
+
+<div class="container">
+  <div id="errorBox" class="error-box" style="display:none;"></div>
+
+  <div class="tab-row">
+    <button class="tab active" onclick="switchTab('meta')">Meta 광고</button>
+    <button class="tab" onclick="switchTab('ga')">GA 세션</button>
+    <button class="tab" onclick="switchTab('combined')">통합 분석</button>
+  </div>
+
+  <!-- META TAB -->
+  <div id="tab-meta" class="tab-content active">
+    <p class="section-label" id="metaLabel">Meta 광고 요약</p>
+    <div class="metric-grid">
+      <div class="metric-card"><div class="metric-label">총 지출</div><div class="metric-value" id="m-spend">—</div><div class="metric-sub" id="m-spend-sub"></div></div>
+      <div class="metric-card"><div class="metric-label">총 노출수</div><div class="metric-value" id="m-impr">—</div><div class="metric-sub" id="m-impr-sub"></div></div>
+      <div class="metric-card"><div class="metric-label">평균 CPM</div><div class="metric-value" id="m-cpm">—</div><div class="metric-sub" id="m-cpm-sub"></div></div>
+      <div class="metric-card"><div class="metric-label">총 액션수</div><div class="metric-value" id="m-actions">—</div><div class="metric-sub" id="m-actions-sub"></div></div>
+    </div>
+    <div class="chart-full"><div class="card">
+      <div class="card-header"><span class="card-title">일별 지출 & 노출수</span><div class="legend"><div class="legend-item"><span class="legend-dot" style="background:var(--blue)"></span>지출(원)</div><div class="legend-item"><span class="legend-dot" style="background:var(--green)"></span>노출수</div></div></div>
+      <div style="position:relative;height:220px;"><canvas id="c1"></canvas></div>
+    </div></div>
+    <div class="chart-row">
+      <div class="card">
+        <div class="card-header"><span class="card-title">캠페인별 지출 비중</span></div>
+        <div id="campaignLegend" class="legend" style="margin-bottom:10px;flex-wrap:wrap;gap:8px;"></div>
+        <div style="position:relative;height:210px;"><canvas id="c2"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">최적화 목표별 평균 CPM</span></div>
+        <div style="position:relative;height:240px;"><canvas id="c3"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GA TAB -->
+  <div id="tab-ga" class="tab-content">
+    <p class="section-label" id="gaLabel">GA 세션 분석</p>
+    <div class="metric-grid">
+      <div class="metric-card"><div class="metric-label">총 세션수</div><div class="metric-value" id="g-sessions">—</div></div>
+      <div class="metric-card"><div class="metric-label">평균 이탈률</div><div class="metric-value" id="g-bounce">—</div></div>
+      <div class="metric-card"><div class="metric-label">평균 체류시간</div><div class="metric-value" id="g-duration">—</div></div>
+      <div class="metric-card"><div class="metric-label">유입 채널 수</div><div class="metric-value" id="g-channels">—</div></div>
+    </div>
+    <div class="chart-row">
+      <div class="card">
+        <div class="card-header"><span class="card-title">일별 세션수 추이</span></div>
+        <div style="position:relative;height:220px;"><canvas id="c5"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">소스별 세션 비중</span></div>
+        <div id="sourceLegend" class="legend" style="margin-bottom:10px;flex-wrap:wrap;gap:8px;"></div>
+        <div style="position:relative;height:200px;"><canvas id="c6"></canvas></div>
+      </div>
+    </div>
+    <div class="chart-full"><div class="card">
+      <div class="card-header"><span class="card-title">랜딩 페이지별 체류시간 & 이탈률</span><div class="legend"><div class="legend-item"><span class="legend-dot" style="background:var(--purple)"></span>체류시간(s)</div><div class="legend-item"><span class="legend-dot" style="background:var(--coral)"></span>이탈률(%)</div></div></div>
+      <div style="position:relative;height:260px;"><canvas id="c7"></canvas></div>
+    </div></div>
+  </div>
+
+  <!-- COMBINED TAB -->
+  <div id="tab-combined" class="tab-content">
+    <p class="section-label">통합 성과 분석</p>
+    <div class="metric-grid">
+      <div class="metric-card"><div class="metric-label">총 광고비</div><div class="metric-value" id="c-spend">—</div></div>
+      <div class="metric-card"><div class="metric-label">총 세션</div><div class="metric-value" id="c-sessions">—</div></div>
+      <div class="metric-card"><div class="metric-label">세션당 광고비</div><div class="metric-value" id="c-cps">—</div></div>
+      <div class="metric-card"><div class="metric-label">총 액션수</div><div class="metric-value" id="c-actions">—</div></div>
+    </div>
+    <div class="chart-full"><div class="card">
+      <div class="card-header"><span class="card-title">일별 광고 지출 vs 유입 세션</span><div class="legend"><div class="legend-item"><span class="legend-dot" style="background:var(--blue)"></span>광고 지출</div><div class="legend-item"><span class="legend-dot" style="background:var(--green)"></span>세션수</div></div></div>
+      <div style="position:relative;height:240px;"><canvas id="c8"></canvas></div>
+    </div></div>
+    <div class="chart-row">
+      <div class="card">
+        <div class="card-header"><span class="card-title">채널별 세션 & 이탈률</span><div class="legend"><div class="legend-item"><span class="legend-dot" style="background:var(--blue)"></span>세션수</div><div class="legend-item"><span class="legend-dot" style="background:var(--coral)"></span>이탈률(%)</div></div></div>
+        <div style="position:relative;height:240px;"><canvas id="c9"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">캠페인별 노출 vs 액션</span><div class="legend"><div class="legend-item"><span class="legend-dot" style="background:rgba(55,138,221,0.5)"></span>노출수</div><div class="legend-item"><span class="legend-dot" style="background:var(--purple)"></span>액션수</div></div></div>
+        <div style="position:relative;height:240px;"><canvas id="c10"></canvas></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SHEET_ID = '1Vf6dxdGbu8cQq2BYBYXVeBsGh4sDmj1G1s-j9yfRXWI';
+const META_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Meta`;
+const GA_URL   = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=GA`;
+
+const isDark = matchMedia('(prefers-color-scheme:dark)').matches;
+const gridC  = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
+const textC  = isDark ? '#9b9b96' : '#6b6b67';
+const COLORS  = ['#378ADD','#1D9E75','#D85A30','#D4537E','#BA7517','#534AB7','#888780','#0F6E56'];
+
+let charts = {};
+
+/* ── CSV PARSER ─────────────────────────────────── */
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  const headers = splitCSVRow(lines[0]);
+  return lines.slice(1).map(line => {
+    const vals = splitCSVRow(line);
+    const obj = {};
+    headers.forEach((h, i) => obj[h.trim().replace(/^"|"$/g,'')] = (vals[i]||'').trim().replace(/^"|"$/g,''));
+    return obj;
+  }).filter(r => Object.values(r).some(v => v));
+}
+
+function splitCSVRow(row) {
+  const result = []; let cur = ''; let inQ = false;
+  for (let i = 0; i < row.length; i++) {
+    const c = row[i];
+    if (c === '"') { inQ = !inQ; }
+    else if (c === ',' && !inQ) { result.push(cur); cur = ''; }
+    else { cur += c; }
+  }
+  result.push(cur);
+  return result;
+}
+
+/* ── FETCH ──────────────────────────────────────── */
+async function fetchSheet(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const text = await res.text();
+  // gviz sometimes wraps in google.visualization.Query.setResponse(...)
+  if (text.startsWith('google.visualization')) {
+    const json = text.replace(/^[^(]+\(/, '').replace(/\);?\s*$/, '');
+    const data = JSON.parse(json);
+    const cols = data.table.cols.map(c => c.label);
+    const rows = data.table.rows.map(r => {
+      const obj = {};
+      cols.forEach((c, i) => obj[c] = r.c[i] ? (r.c[i].v !== null ? String(r.c[i].v) : '') : '');
+      return obj;
+    });
+    return rows;
+  }
+  return parseCSV(text);
+}
+
+/* ── CHART HELPERS ──────────────────────────────── */
+function destroyChart(id) { if (charts[id]) { charts[id].destroy(); delete charts[id]; } }
+
+function makeChart(id, config) {
+  destroyChart(id);
+  const ctx = document.getElementById(id);
+  if (!ctx) return;
+  charts[id] = new Chart(ctx, config);
+}
+
+function baseScales(extra={}) {
+  return { x: { grid:{color:gridC}, ticks:{color:textC,font:{size:11}} }, y: { grid:{color:gridC}, ticks:{color:textC,font:{size:11}} }, ...extra };
+}
+
+/* ── AGGREGATE HELPERS ──────────────────────────── */
+function groupBy(arr, key) {
+  return arr.reduce((acc, row) => {
+    const k = row[key] || 'unknown';
+    acc[k] = acc[k] || [];
+    acc[k].push(row);
+    return acc;
+  }, {});
+}
+
+function toDate(str) { return str ? str.slice(0,10) : ''; }
+
+function num(v) { const n = parseFloat(v); return isNaN(n) ? 0 : n; }
+
+function fmt(n, prefix='', suffix='') {
+  if (n >= 1000000) return prefix + (n/1000000).toFixed(1) + 'M' + suffix;
+  if (n >= 1000) return prefix + (n/1000).toFixed(1) + 'K' + suffix;
+  return prefix + Math.round(n).toLocaleString() + suffix;
+}
+
+/* ── RENDER META ────────────────────────────────── */
+function renderMeta(rows) {
+  const totalSpend   = rows.reduce((s,r) => s + num(r['Spend']), 0);
+  const totalImpr    = rows.reduce((s,r) => s + num(r['Impressions']), 0);
+  const totalActions = rows.reduce((s,r) => s + num(r['Action Value']), 0);
+  const avgCPM       = rows.length ? rows.reduce((s,r) => s + num(r['CPM']), 0) / rows.length : 0;
+
+  document.getElementById('m-spend').textContent   = '₩' + fmt(totalSpend);
+  document.getElementById('m-impr').textContent    = fmt(totalImpr);
+  document.getElementById('m-cpm').textContent     = '₩' + Math.round(avgCPM).toLocaleString();
+  document.getElementById('m-actions').textContent = Math.round(totalActions).toLocaleString();
+
+  // Date range label
+  const dates = rows.map(r => toDate(r['Date Start'])).filter(Boolean).sort();
+  if (dates.length) {
+    const s = dates[0].slice(5).replace('-','.'), e = dates[dates.length-1].slice(5).replace('-','.');
+    document.getElementById('metaLabel').textContent = `Meta 광고 요약 · ${dates[0].slice(0,7).replace('-','.')} (${s} – ${e})`;
+  }
+
+  // Chart 1: daily spend + impressions
+  const byDate = groupBy(rows, 'Date Start');
+  const sortedDates = Object.keys(byDate).sort();
+  const dailySpend = sortedDates.map(d => byDate[d].reduce((s,r) => s + num(r['Spend']),0));
+  const dailyImpr  = sortedDates.map(d => byDate[d].reduce((s,r) => s + num(r['Impressions']),0));
+  const dateLabels = sortedDates.map(d => d.slice(5,10).replace('-','.'));
+
+  makeChart('c1', { type:'bar', data:{labels:dateLabels, datasets:[
+    {label:'지출',data:dailySpend,backgroundColor:'rgba(55,138,221,0.7)',borderRadius:3,yAxisID:'y'},
+    {label:'노출수',data:dailyImpr,type:'line',borderColor:'#1D9E75',backgroundColor:'rgba(29,158,117,0.1)',borderWidth:2,pointRadius:3,tension:0.4,yAxisID:'y1'}
+  ]}, options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false}},
+    scales:{x:{grid:{color:gridC},ticks:{color:textC,font:{size:10},maxRotation:45,autoSkip:false}},
+      y:{grid:{color:gridC},ticks:{color:textC,font:{size:11}}},
+      y1:{position:'right',grid:{display:false},ticks:{color:'#1D9E75',font:{size:11}}}}}});
+
+  // Chart 2: campaign spend donut
+  const byCampaign = groupBy(rows, 'Campaign Name');
+  const campNames  = Object.keys(byCampaign);
+  const campSpend  = campNames.map(c => byCampaign[c].reduce((s,r) => s+num(r['Spend']),0));
+  const campColors = campNames.map((_,i) => COLORS[i % COLORS.length]);
+
+  const legEl = document.getElementById('campaignLegend');
+  legEl.innerHTML = campNames.map((n,i) =>
+    `<div class="legend-item"><span class="legend-dot" style="background:${campColors[i]}"></span>${n}</div>`).join('');
+
+  makeChart('c2', { type:'doughnut', data:{labels:campNames,datasets:[{data:campSpend,backgroundColor:campColors,borderWidth:0,hoverOffset:4}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
+
+  // Chart 3: avg CPM by optimization goal (horizontal bar)
+  const byGoal = groupBy(rows, 'Optimization Goal');
+  const goalNames = Object.keys(byGoal);
+  const goalCPM   = goalNames.map(g => {
+    const arr = byGoal[g].filter(r => num(r['CPM']) > 0);
+    return arr.length ? arr.reduce((s,r) => s+num(r['CPM']),0)/arr.length : 0;
+  });
+
+  makeChart('c3', {type:'bar',data:{labels:goalNames,datasets:[{data:goalCPM,backgroundColor:campColors.slice(0,goalNames.length),borderRadius:4}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'₩'+Math.round(c.raw).toLocaleString()}}},
+      scales:{x:{grid:{color:gridC},ticks:{color:textC,font:{size:11},callback:v=>'₩'+Math.round(v).toLocaleString()}},
+        y:{grid:{display:false},ticks:{color:textC,font:{size:11}}}}}});
+}
+
+/* ── RENDER GA ──────────────────────────────────── */
+function renderGA(rows) {
+  const totalSessions = rows.reduce((s,r) => s+num(r['Sessions']),0);
+  const avgBounce     = rows.length ? rows.reduce((s,r)=>s+num(r['Bounce Rate']),0)/rows.length : 0;
+  const avgDuration   = rows.length ? rows.reduce((s,r)=>s+num(r['Average Session Duration']),0)/rows.length : 0;
+  const channels      = new Set(rows.map(r => r['Session Source'])).size;
+
+  document.getElementById('g-sessions').textContent = Math.round(totalSessions).toLocaleString();
+  document.getElementById('g-bounce').textContent   = (avgBounce*100).toFixed(1)+'%';
+  document.getElementById('g-duration').textContent = Math.round(avgDuration)+'s';
+  document.getElementById('g-channels').textContent = channels;
+
+  // Date label
+  const dates = rows.map(r=>toDate(r['Date'])).filter(Boolean).sort();
+  if (dates.length) {
+    const s = dates[0].slice(5).replace('-','.'), e = dates[dates.length-1].slice(5).replace('-','.');
+    document.getElementById('gaLabel').textContent = `GA 세션 분석 · ${s} – ${e}`;
+  }
+
+  // Chart 5: daily sessions
+  const byDate = groupBy(rows, 'Date');
+  const sortedDates = Object.keys(byDate).sort();
+  const dailySess  = sortedDates.map(d => byDate[d].reduce((s,r)=>s+num(r['Sessions']),0));
+  const dateLabels = sortedDates.map(d => d.slice(5,10).replace('-','.'));
+
+  makeChart('c5',{type:'line',data:{labels:dateLabels,datasets:[{data:dailySess,borderColor:'#378ADD',backgroundColor:'rgba(55,138,221,0.1)',borderWidth:2,pointRadius:3,tension:0.4,fill:true}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{grid:{color:gridC},ticks:{color:textC,font:{size:10},maxRotation:45,autoSkip:false}},y:{grid:{color:gridC},ticks:{color:textC,font:{size:11}}}}}});
+
+  // Chart 6: source donut (group small sources)
+  const bySrc = {};
+  rows.forEach(r => {
+    let src = r['Session Source'] || 'unknown';
+    if (src.includes('facebook') || src === 'fb') src = 'Facebook';
+    else if (src.includes('google') || src.includes('search.google')) src = 'Google';
+    else if (src.includes('naver')) src = 'Naver';
+    else if (src === '(direct)') src = 'Direct';
+    else if (src === 'ig') src = 'Instagram';
+    else if (src === 'linktr.ee') src = 'Linktree';
+    else src = '기타';
+    bySrc[src] = (bySrc[src]||0) + num(r['Sessions']);
+  });
+  const srcNames  = Object.keys(bySrc).sort((a,b)=>bySrc[b]-bySrc[a]);
+  const srcValues = srcNames.map(k=>bySrc[k]);
+  const srcColors = srcNames.map((_,i)=>COLORS[i%COLORS.length]);
+
+  document.getElementById('sourceLegend').innerHTML = srcNames.map((n,i)=>
+    `<div class="legend-item"><span class="legend-dot" style="background:${srcColors[i]}"></span>${n} (${srcValues[i]})</div>`).join('');
+
+  makeChart('c6',{type:'doughnut',data:{labels:srcNames,datasets:[{data:srcValues,backgroundColor:srcColors,borderWidth:0,hoverOffset:4}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
+
+  // Chart 7: landing page duration + bounce
+  const byPage = {};
+  rows.forEach(r => {
+    const p = r['Landing Page']||'/';
+    if (!byPage[p]) byPage[p]={dur:0,bounce:0,cnt:0};
+    byPage[p].dur   += num(r['Average Session Duration'])*num(r['Sessions']);
+    byPage[p].bounce += num(r['Bounce Rate'])*num(r['Sessions']);
+    byPage[p].cnt   += num(r['Sessions']);
+  });
+  const pages = Object.keys(byPage).sort((a,b)=>byPage[b].cnt-byPage[a].cnt).slice(0,8);
+  const pageDur    = pages.map(p=>byPage[p].cnt>0 ? Math.round(byPage[p].dur/byPage[p].cnt) : 0);
+  const pageBounce = pages.map(p=>byPage[p].cnt>0 ? Math.round(byPage[p].bounce/byPage[p].cnt*100) : 0);
+
+  makeChart('c7',{type:'bar',data:{labels:pages,datasets:[
+    {data:pageDur,backgroundColor:'rgba(83,74,183,0.75)',borderRadius:3,yAxisID:'y'},
+    {data:pageBounce,type:'line',borderColor:'#D85A30',backgroundColor:'transparent',borderWidth:2,pointRadius:3,tension:0.3,yAxisID:'y1'}
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+    scales:{x:{grid:{color:gridC},ticks:{color:textC,font:{size:10},maxRotation:30}},
+      y:{grid:{color:gridC},ticks:{color:textC,font:{size:11}}},
+      y1:{position:'right',grid:{display:false},ticks:{color:'#D85A30',font:{size:11},callback:v=>v+'%'},min:0,max:110}}}});
+}
+
+/* ── RENDER COMBINED ────────────────────────────── */
+function renderCombined(metaRows, gaRows) {
+  const totalSpend   = metaRows.reduce((s,r)=>s+num(r['Spend']),0);
+  const totalSessions= gaRows.reduce((s,r)=>s+num(r['Sessions']),0);
+  const totalActions = metaRows.reduce((s,r)=>s+num(r['Action Value']),0);
+  const cps          = totalSessions > 0 ? totalSpend/totalSessions : 0;
+
+  document.getElementById('c-spend').textContent   = '₩'+fmt(totalSpend);
+  document.getElementById('c-sessions').textContent= Math.round(totalSessions).toLocaleString();
+  document.getElementById('c-cps').textContent     = '₩'+Math.round(cps).toLocaleString();
+  document.getElementById('c-actions').textContent = Math.round(totalActions).toLocaleString();
+
+  // Chart 8: daily spend vs sessions
+  const allDates = [...new Set([
+    ...metaRows.map(r=>toDate(r['Date Start'])),
+    ...gaRows.map(r=>toDate(r['Date']))
+  ].filter(Boolean))].sort();
+
+  const metaByDate = groupBy(metaRows, 'Date Start');
+  const gaByDate   = groupBy(gaRows, 'Date');
+
+  const dSpend = allDates.map(d=>(metaByDate[d]||[]).reduce((s,r)=>s+num(r['Spend']),0));
+  const dSess  = allDates.map(d=>(gaByDate[d]||[]).reduce((s,r)=>s+num(r['Sessions']),0));
+  const dLabels= allDates.map(d=>d.slice(5).replace('-','.'));
+
+  makeChart('c8',{type:'bar',data:{labels:dLabels,datasets:[
+    {label:'지출',data:dSpend,backgroundColor:'rgba(55,138,221,0.7)',borderRadius:3,yAxisID:'y'},
+    {label:'세션',data:dSess,type:'line',borderColor:'#1D9E75',backgroundColor:'rgba(29,158,117,0.12)',borderWidth:2.5,pointRadius:3,tension:0.4,yAxisID:'y1'}
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false}},
+    scales:{x:{grid:{color:gridC},ticks:{color:textC,font:{size:10},maxRotation:45,autoSkip:false}},
+      y:{grid:{color:gridC},ticks:{color:textC,font:{size:11}}},
+      y1:{position:'right',grid:{display:false},ticks:{color:'#1D9E75',font:{size:11}}}}}});
+
+  // Chart 9: channel sessions + bounce
+  const chanMap = {};
+  gaRows.forEach(r=>{
+    let src = r['Session Source']||'unknown';
+    if(src.includes('facebook')||src==='fb') src='Facebook';
+    else if(src.includes('google')) src='Google';
+    else if(src.includes('naver')) src='Naver';
+    else if(src==='(direct)') src='Direct';
+    else if(src==='ig') src='Instagram';
+    else src='기타';
+    if(!chanMap[src]) chanMap[src]={sess:0,bounce:0,cnt:0};
+    chanMap[src].sess  += num(r['Sessions']);
+    chanMap[src].bounce += num(r['Bounce Rate'])*num(r['Sessions']);
+    chanMap[src].cnt   += num(r['Sessions']);
+  });
+  const chans = Object.keys(chanMap).sort((a,b)=>chanMap[b].sess-chanMap[a].sess);
+  const chSess  = chans.map(c=>chanMap[c].sess);
+  const chBounce= chans.map(c=>chanMap[c].cnt>0?Math.round(chanMap[c].bounce/chanMap[c].cnt*100):0);
+
+  makeChart('c9',{type:'bar',data:{labels:chans,datasets:[
+    {data:chSess,backgroundColor:'rgba(55,138,221,0.75)',borderRadius:3,yAxisID:'y'},
+    {data:chBounce,type:'line',borderColor:'#D85A30',backgroundColor:'transparent',borderWidth:2,pointRadius:4,tension:0.3,yAxisID:'y1'}
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+    scales:{x:{grid:{color:gridC},ticks:{color:textC,font:{size:11}}},
+      y:{grid:{color:gridC},ticks:{color:textC,font:{size:11}}},
+      y1:{position:'right',grid:{display:false},ticks:{color:'#D85A30',font:{size:11},callback:v=>v+'%'},min:0,max:120}}}});
+
+  // Chart 10: campaign impr vs actions
+  const byCamp = groupBy(metaRows,'Campaign Name');
+  const cNames = Object.keys(byCamp);
+  const cImpr  = cNames.map(c=>byCamp[c].reduce((s,r)=>s+num(r['Impressions']),0));
+  const cAct   = cNames.map(c=>byCamp[c].reduce((s,r)=>s+num(r['Action Value']),0));
+
+  makeChart('c10',{type:'bar',data:{labels:cNames,datasets:[
+    {label:'노출수',data:cImpr,backgroundColor:'rgba(55,138,221,0.5)',borderRadius:3},
+    {label:'액션',data:cAct,backgroundColor:'rgba(83,74,183,0.85)',borderRadius:3}
+  ]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+    scales:{x:{grid:{color:gridC},ticks:{color:textC,font:{size:11}}},y:{grid:{display:false},ticks:{color:textC,font:{size:11}}}}}});
+}
+
+/* ── MAIN LOAD ──────────────────────────────────── */
+async function loadAll() {
+  const btn = document.getElementById('refreshBtn');
+  const dot = document.getElementById('statusDot');
+  const txt = document.getElementById('statusText');
+  const err = document.getElementById('errorBox');
+
+  btn.classList.add('loading');
+  dot.className = 'status-dot loading';
+  txt.textContent = 'Google Sheets에서 데이터를 불러오는 중...';
+  err.style.display = 'none';
+
+  try {
+    const [metaRows, gaRows] = await Promise.all([fetchSheet(META_URL), fetchSheet(GA_URL)]);
+
+    renderMeta(metaRows);
+    renderGA(gaRows);
+    renderCombined(metaRows, gaRows);
+
+    // Date range header
+    const allDates = [...metaRows.map(r=>toDate(r['Date Start'])), ...gaRows.map(r=>toDate(r['Date']))].filter(Boolean).sort();
+    if (allDates.length) {
+      document.getElementById('dateRange').textContent =
+        allDates[0].slice(5).replace('-','.') + ' – ' + allDates[allDates.length-1].slice(5).replace('-','.');
+    }
+
+    const now = new Date().toLocaleTimeString('ko-KR');
+    dot.className = 'status-dot';
+    txt.textContent = `마지막 업데이트: ${now} · Meta ${metaRows.length}행, GA ${gaRows.length}행 로드됨`;
+  } catch(e) {
+    dot.className = 'status-dot error';
+    txt.textContent = '데이터 로드 실패 — 스프레드시트 공개 설정을 확인하세요';
+    err.style.display = 'block';
+    err.textContent = `오류: ${e.message}\n\n스프레드시트가 "링크가 있는 모든 사용자" 보기 권한으로 공개되어 있는지 확인하세요.`;
+    console.error(e);
+  } finally {
+    btn.classList.remove('loading');
+  }
+}
+
+function switchTab(name) {
+  document.querySelectorAll('.tab-content').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach((btn,i)=>btn.classList.toggle('active',['meta','ga','combined'][i]===name));
+  document.getElementById('tab-'+name).classList.add('active');
+}
+
+// Auto-load on page open
+loadAll();
+</script>
+</body>
+</html>
