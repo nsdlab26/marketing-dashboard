@@ -426,7 +426,7 @@ function renderGAWeek(wk){
 
   // 랜딩페이지
   const pageMap={};
-  gaRaw.forEach(r=>{
+rows.forEach(r=>{
     if(!pageMap[r.page])pageMap[r.page]={sess:0,dSum:0};
     pageMap[r.page].sess+=r.sessions;
     pageMap[r.page].dSum+=r.duration*r.sessions;
