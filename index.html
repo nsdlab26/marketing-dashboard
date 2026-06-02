@@ -227,16 +227,20 @@ function parseCSVRow(line) {
 }
 
 // ── 날짜 파싱 ──
-function parseDate(raw) {
+javascriptfunction parseDate(raw) {
   if (!raw) return '';
   const d = new Date(raw);
   if (!isNaN(d)) {
+    // KST 변환 후에 slice 하면 일자가 밀림
+    // 그냥 UTC 날짜만 사용 (또는 UTC 시간 기준으로)
     const kst = new Date(d.getTime() + 9 * 60 * 60 * 1000);
-    return kst.toISOString().slice(0, 10);
+    const kstStr = kst.toISOString();
+    // 문제: 시간 변환 후 자정을 넘으면 날짜가 바뀜
+    // 해결: 원본 UTC 날짜 사용
+    return d.toISOString().slice(0, 10);
   }
   return raw.slice(0, 10);
 }
-
 // ── Meta 시트 파싱 ──
 function parseMetaSheet(csv) {
   const rows = parseCSV(csv);
