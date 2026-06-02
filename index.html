@@ -227,7 +227,7 @@ function parseCSVRow(line) {
 }
 
 // ── 날짜 파싱 ──
-javascriptfunction parseDate(raw) {
+function parseDate(raw) {
   if (!raw) return '';
   const d = new Date(raw);
   if (!isNaN(d)) {
